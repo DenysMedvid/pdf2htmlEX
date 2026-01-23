@@ -15,6 +15,11 @@ set -ev
 
 cd fontforge
 
+GETTEXT_VERSION=$(gettext --version | head -n1 | awk '{print $NF}')
+if [ "$(printf '%s\n' "0.20.0" "$GETTEXT_VERSION" | sort -V | head -n1)" != "$GETTEXT_VERSION" ]; then
+  sed -i.orig 's/\(%[^%[:space:]]*\)hs/\1s/g' fontforgeexe/searchview.c po/de.po po/ca.po po/hr.po po/it.po po/pl.po po/uk.po po/en_GB.po po/fr.po po/vi.po po/ko.po po/ja.po
+fi
+
 mkdir build
 
 cd build
