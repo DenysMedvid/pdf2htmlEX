@@ -1,6 +1,6 @@
 # ![](https://pdf2htmlEX.github.io/pdf2htmlEX/images/pdf2htmlEX-64x64.png) pdf2htmlEX 
 
-[![Build Status](https://travis-ci.org/pdf2htmlEX/pdf2htmlEX.svg?branch=master)](https://travis-ci.org/pdf2htmlEX/pdf2htmlEX)
+[![Build Status](https://github.com/DenysMedvid/pdf2htmlEX/actions/workflows/build.yml/badge.svg)](https://github.com/DenysMedvid/pdf2htmlEX/actions/workflows/build.yml)
 
 ## Documentation
 

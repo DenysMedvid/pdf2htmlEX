@@ -1,38 +1,48 @@
 #!/bin/sh
 
-set -ev 
+set -ev
 
-# This shell script installs all local software required to run the 
-# pdf2htmlEX tests 
+# This shell script installs all local software required to run the
+# pdf2htmlEX tests
 
 export DEBIAN_FRONTEND=noninteractive
 
-# Start by making sure all required apt packages exist
+# Install required apt packages (Firefox is handled separately below)
 #
 sudo apt -y install \
-  wget              \
-  diffutils         \
-  zip               \
-  python3           \
-  python3-pip       \
-  xvfb              \
-  firefox
+  wget                       \
+  diffutils                  \
+  zip                        \
+  python3                    \
+  python3-pip                \
+  xvfb                       \
+  software-properties-common
 
-# Now get the geckodriver for firefox (as required by selenium)
+# Install Firefox as a proper deb package via Mozilla PPA.
+# On Ubuntu 22.04+, "apt install firefox" installs a snap wrapper that
+# does not work in headless/Xvfb environments.
 #
+sudo add-apt-repository -y ppa:mozillateam/ppa
+printf 'Package: *\nPin: release o=LP-PPA-mozillateam\nPin-Priority: 1001\n' \
+  | sudo tee /etc/apt/preferences.d/mozilla-firefox
+sudo apt -y update
+sudo apt -y install firefox
+
+# Install geckodriver (the WebDriver bridge for Firefox / Selenium)
+#
+GECKODRIVER_VERSION=0.35.0
 oldPWD=$(pwd)
 cd /tmp
 #
-wget https://github.com/mozilla/geckodriver/releases/download/v0.26.0/geckodriver-v0.26.0-linux64.tar.gz
+wget https://github.com/mozilla/geckodriver/releases/download/v${GECKODRIVER_VERSION}/geckodriver-v${GECKODRIVER_VERSION}-linux64.tar.gz
 #
-tar xvf geckodriver-v0.26.0-linux64.tar.gz
+tar xvf geckodriver-v${GECKODRIVER_VERSION}-linux64.tar.gz
 #
 sudo mv geckodriver /usr/local/bin
 #
 cd $oldPWD
 
-# Now make sure all python packages exist (install into the local user's 
-# PyPI archive) 
+# Install Python test packages
 #
 pip3 install \
   selenium  \

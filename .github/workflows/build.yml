@@ -1,6 +1,8 @@
 name: Build the project
 
-on: [push]
+on:
+  - workflow_dispatch
+  - push
 
 jobs:
   build:
@@ -17,3 +19,6 @@ jobs:
         with:
           name: my-artifact
           path: pdf2htmlEX/build
+
+      - name: Run non-browser tests
+        run: ctest --test-dir pdf2htmlEX/build -R test_basic --output-on-failure
