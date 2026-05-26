@@ -1,0 +1,327 @@
+# pdf2htmlEX Full AI Repository Guide
+
+This file is optimized for AI agents doing code modifications in this local
+repository. It summarizes the current codebase only.
+
+## Repository Purpose
+
+`pdf2htmlEX` converts PDF files into HTML. It attempts to preserve visual layout
+while retaining selectable/copyable text where possible. Text is emitted as
+HTML with generated CSS and web fonts. Non-text PDF content, fallback text, and
+covered text are rendered into page background assets.
+
+The project is mainly C++ with a C wrapper for FontForge internals. Python is
+used for tests and helper scripts. Shell scripts drive the full build because
+the converter is tightly coupled to specific Poppler and FontForge versions.
+
+The project wiki has been read and localized into local docs. User-facing wiki
+material lives mainly under `docs/user/`, package/container notes in
+`docs/build/prebuilt-packages.md`, and page provenance in
+`docs/reference/wiki-sources.md`. Treat explicitly old wiki pages as historical
+context unless current repository files corroborate them.
+
+## Current Architecture Summary
+
+Runtime flow:
+
+1. `pdf2htmlEX/src/pdf2htmlEX.cc` parses CLI options into `Param`.
+2. Poppler `PDFDocFactory` opens the PDF.
+3. `HTMLRenderer::process` runs `Preprocessor` as a first Poppler `OutputDev`
+   pass to collect used font codes and max page dimensions.
+4. `HTMLRenderer` runs as the main Poppler `OutputDev` pass.
+5. Text callbacks populate `HTMLTextPage` and `HTMLTextLine`.
+6. Font callbacks install, extract, reencode, hint, and emit fonts/CSS through
+   `HTMLRenderer/font.cc` and `util/ffw.c`.
+7. Drawing/image callbacks feed `DrawingTracer` and `CoveredTextDetector`.
+8. `BackgroundRenderer` renders PNG/JPEG/SVG page backgrounds.
+9. `StateManager` emits reusable CSS classes.
+10. `share/manifest` assembles final HTML from static assets and generated
+    CSS/pages/outline.
+
+There is no full document IR. The code uses per-document maps, per-page text
+buffers, CSS class managers, and temporary output streams.
+
+## Main Directories And Files
+
+- `README.md`: root overview and patched behavior notes.
+- `docs/README.md`: documentation index.
+- `docs/user/`: quick start, browser/mobile, optimization/customization, FAQ,
+  and limitations localized from the wiki.
+- `docs/reference/wiki-sources.md`: wiki page inventory and caveats.
+- `buildScripts/`: active build/test/release shell scripts.
+- `pdf2htmlEX/CMakeLists.txt`: converter CMake project and source list.
+- `pdf2htmlEX/src/pdf2htmlEX.cc`: CLI and program entry point.
+- `pdf2htmlEX/src/Param.h`: runtime configuration.
+- `pdf2htmlEX/src/ArgParser.*`: `getopt_long` wrapper.
+- `pdf2htmlEX/src/Preprocessor.*`: first PDF scan.
+- `pdf2htmlEX/src/HTMLRenderer/HTMLRenderer.h`: central renderer.
+- `pdf2htmlEX/src/HTMLRenderer/general.cc`: process loop and manifest assembly.
+- `pdf2htmlEX/src/HTMLRenderer/state.cc`: PDF state to HTML state conversion.
+- `pdf2htmlEX/src/HTMLRenderer/text.cc`: text extraction/output buffering.
+- `pdf2htmlEX/src/HTMLRenderer/font.cc`: font extraction/conversion/CSS.
+- `pdf2htmlEX/src/HTMLRenderer/image.cc`: image coverage tracing.
+- `pdf2htmlEX/src/HTMLRenderer/draw.cc`: path/stroke/fill tracing.
+- `pdf2htmlEX/src/HTMLRenderer/link.cc`: link annotation output.
+- `pdf2htmlEX/src/HTMLRenderer/form.cc`: optional form output.
+- `pdf2htmlEX/src/HTMLRenderer/outline.cc`: outline output.
+- `pdf2htmlEX/src/BackgroundRenderer/`: Splash and Cairo background renderers.
+- `pdf2htmlEX/src/HTMLTextPage.*`: per-page text collection and clipping.
+- `pdf2htmlEX/src/HTMLTextLine.*`: line-level HTML text and spans.
+- `pdf2htmlEX/src/StateManager.h`: CSS class interning.
+- `pdf2htmlEX/src/CoveredTextDetector.*`: covered character decisions.
+- `pdf2htmlEX/src/DrawingTracer.*`: Cairo geometry tracing.
+- `pdf2htmlEX/src/util/ffw.*`: FontForge C wrapper.
+- `pdf2htmlEX/share/manifest`: final HTML template.
+- `pdf2htmlEX/share/*.in`: CSS/JS templates.
+- `pdf2htmlEX/test/`: Python tests and fixtures.
+- `poppler/`, `fontforge/`, `poppler-data/`: dependency source/data trees.
+
+## Build Summary
+
+Normal build path is script-driven:
+
+```sh
+./buildScripts/buildInstallLocallyApt
+```
+
+The wiki strongly recommends this scripted path because Poppler and FontForge
+must be matched to `pdf2htmlEX` source expectations.
+
+Equivalent sequence:
+
+```sh
+./buildScripts/versionEnvs
+./buildScripts/reportEnvs
+./buildScripts/getBuildToolsApt
+./buildScripts/getDevLibrariesApt
+./buildScripts/getPoppler
+./buildScripts/buildPoppler
+./buildScripts/getFontforge
+./buildScripts/buildFontforge
+./buildScripts/buildPdf2htmlEX
+./buildScripts/installPdf2htmlEX
+```
+
+Current version pins in `buildScripts/versionEnvs`:
+
+- `PDF2HTMLEX_VERSION=0.18.8.rc2`
+- `POPPLER_VERSION=poppler-24.06.1`
+- `FONTFORGE_VERSION=20230101`
+
+`getPoppler` downloads `poppler-data-0.4.12`.
+
+Local verification:
+
+- `pdf2htmlEX/build/pdf2htmlEX -v` ran and reported Poppler `24.06.1`,
+  FontForge `20230101`, Cairo `1.18.4`, and formats `png jpg svg`.
+- `cmake --build pdf2htmlEX/build --target pdf2htmlEX -- -j2` failed before
+  compilation with CMake `4.3.0`, because the project declares
+  `cmake_minimum_required(VERSION 2.6.0)`.
+
+Do not claim a clean build passes until the CMake policy issue is addressed or
+the build is run in a compatible environment.
+
+Prebuilt/wiki artifact docs:
+
+- `docs/build/prebuilt-packages.md`
+- Debian archive: install local `.deb` with `sudo apt install ./file.deb`.
+- Docker wiki image name: `pdf2htmlex/pdf2htmlex`.
+- Docker working directory in wiki examples: `/pdf`.
+- Docker data dir in wiki examples: `/usr/local/share/pdf2htmlEX`.
+- AppImage and `.deb` still rely on host Fontconfig/iconv configuration.
+
+## Test Summary
+
+Fast tests:
+
+```sh
+mkdir -p /tmp/pdf2htmlEX/tmp /tmp/pdf2htmlEX/dat /tmp/pdf2htmlEX/png /tmp/pdf2htmlEX/out /tmp/pdf2htmlEX/html
+cd pdf2htmlEX/test
+python3 test_output.py
+```
+
+Verified result: passed, 23 tests.
+
+CTest:
+
+```sh
+ctest --test-dir pdf2htmlEX/build -N
+ctest --test-dir pdf2htmlEX/build -R test_basic --output-on-failure
+```
+
+Verified result: CTest lists `test_basic` and `test_browser`; `test_basic`
+passed.
+
+Browser tests:
+
+```sh
+cd pdf2htmlEX/test
+./runLocalBrowserTests
+```
+
+Not run during documentation because Selenium, geckodriver, and Xvfb were
+missing locally. `browser_tests/text_visibility` is skipped in code due clipping
+issues.
+
+## Rendering Pipeline Summary
+
+Input:
+
+- CLI options
+- input PDF
+- data directory assets
+- poppler-data
+
+Processing:
+
+- Parse CLI into `Param`.
+- Open `PDFDoc`.
+- Preprocess selected pages at `DEFAULT_DPI` to record used font codes and max
+  page dimensions.
+- Compute zoom/text scale factors.
+- For each page, render through `HTMLRenderer` callbacks.
+- Store text in `HTMLTextPage`/`HTMLTextLine`.
+- Trace coverage with `DrawingTracer`/`CoveredTextDetector`.
+- Render page background through Splash or Cairo.
+- Emit generated CSS through `StateManager` and font code.
+- Emit outlines, links, forms, and page metadata.
+- Apply `share/manifest`.
+
+Output:
+
+- main HTML
+- optional CSS file
+- optional font files
+- optional background files
+- optional outline file
+- optional split page files
+
+Common wiki recipes:
+
+- `pdf2htmlEX --zoom 1.3 input.pdf`
+- `pdf2htmlEX -f 3 -l 5 --fit-width 1024 --bg-format jpg input.pdf`
+- `pdf2htmlEX --embed cfijo --dest-dir out input.pdf`
+- `pdf2htmlEX --embed cfijo --split-pages 1 --page-filename page-%d.page input.pdf`
+- `pdf2htmlEX --fallback 1 input.pdf`
+
+## Important Classes And Modules
+
+`Param`
+: All runtime options. Add fields here when adding CLI-configurable behavior.
+
+`ArgParser`
+: Typed CLI registration. Options are registered in `parse_options`.
+
+`Preprocessor`
+: First-pass scanner for font code maps and max dimensions.
+
+`HTMLRenderer`
+: Main coordinator and Poppler `OutputDev`. Changes here can affect everything.
+
+`BackgroundRenderer`
+: Strategy base class for background output.
+
+`SplashBackgroundRenderer`
+: PNG/JPEG renderer.
+
+`CairoBackgroundRenderer`
+: SVG renderer and external JPEG extraction path.
+
+`HTMLTextPage`
+: Page-level text buffer and clip grouping.
+
+`HTMLTextLine`
+: Line-level Unicode, offsets, state spans, and text optimization.
+
+`StateManager`
+: Interns CSS values into compact classes.
+
+`CoveredTextDetector`
+: Maintains per-character coverage flags.
+
+`DrawingTracer`
+: Tracks geometry for characters and later non-text drawing.
+
+`ffw_*`
+: FontForge wrapper functions for load, reencode, metric, hint, save.
+
+## C++ And Python Interaction
+
+The converter runtime is C++/C. Python tests invoke the built binary. Python
+does not import converter modules or participate in conversion.
+
+`test.py.in` configures the binary path and temp dirs. `test_output.py` runs the
+binary and checks generated files. Browser tests use Selenium/Pillow screenshots.
+
+## Known Risky Areas
+
+- CMake/build-system compatibility with modern CMake.
+- Poppler API/ABI changes.
+- FontForge internal API changes.
+- `HTMLRenderer/font.cc`, especially CID/TrueType/ToUnicode handling.
+- `util/ffw.c`, because it uses FontForge internals and process-global state.
+- Text positioning in `state.cc` and `HTMLTextLine.cc`.
+- Covered-text detection and DPI changes.
+- SVG output and fallback behavior.
+- Manifest/data-dir assumptions.
+- Browser tests, because they depend on external browser tooling.
+- Generated files from CMake/resource minification.
+- Custom manifests/data directories, because the wiki calls manifest syntax
+  experimental.
+- Mobile output performance, because the wiki says mobile devices are not
+  officially supported.
+- Reflowable text requests, because the converter targets fixed-layout fidelity.
+
+## Documentation Index
+
+- `docs/README.md`
+- `docs/user/README.md`
+- `docs/user/quick-start.md`
+- `docs/user/browser-and-mobile.md`
+- `docs/user/optimization-and-customization.md`
+- `docs/user/faq-limitations.md`
+- `docs/architecture/overview.md`
+- `docs/architecture/module-map.md`
+- `docs/architecture/rendering-pipeline.md`
+- `docs/architecture/data-flow.md`
+- `docs/architecture/design-solutions.md`
+- `docs/architecture/design-patterns.md`
+- `docs/build/overview.md`
+- `docs/build/dependencies.md`
+- `docs/build/platforms.md`
+- `docs/build/prebuilt-packages.md`
+- `docs/build/build-from-source.md`
+- `docs/build/troubleshooting.md`
+- `docs/development/getting-started.md`
+- `docs/development/codebase-tour.md`
+- `docs/development/testing.md`
+- `docs/development/debugging.md`
+- `docs/development/contribution-notes.md`
+- `docs/internals/cli-and-options.md`
+- `docs/internals/pdf-processing.md`
+- `docs/internals/font-handling.md`
+- `docs/internals/image-handling.md`
+- `docs/internals/css-generation.md`
+- `docs/internals/html-generation.md`
+- `docs/internals/asset-output.md`
+- `docs/internals/python-tools.md`
+- `docs/reference/glossary.md`
+- `docs/reference/important-files.md`
+- `docs/reference/configuration.md`
+- `docs/reference/wiki-sources.md`
+
+## Recommended Workflow For Future AI Agents
+
+1. Read `README.md`.
+2. Read `docs/README.md`.
+3. If the change is user-facing, read `docs/user/` and
+   `docs/reference/wiki-sources.md`.
+4. Inspect the relevant internals doc for the target behavior.
+5. Inspect nearby source files and tests.
+6. Make minimal changes.
+7. Run targeted tests.
+8. Update docs if behavior changes.
+
+Always run `git status --short` before and after changes. Do not revert user
+changes. Do not modify source code for documentation-only tasks unless required
+to keep documentation links or generated docs valid.

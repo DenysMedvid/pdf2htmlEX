@@ -1,0 +1,47 @@
+# pdf2htmlEX AI Guide
+
+This repository is a patched `pdf2htmlEX` codebase. It converts PDFs to HTML by
+using Poppler for PDF parsing/render callbacks, FontForge for font conversion,
+and C++ code under `pdf2htmlEX/src` to emit HTML, CSS, fonts, and page
+background assets. Python is used for tests and helpers, not converter runtime.
+
+Start here:
+
+- Human docs index: `docs/README.md`
+- Full AI guide: `llms-full.txt`
+- User quick start: `docs/user/quick-start.md`
+- Wiki-derived source notes: `docs/reference/wiki-sources.md`
+- Architecture: `docs/architecture/overview.md`
+- Design solutions: `docs/architecture/design-solutions.md`
+- Rendering pipeline: `docs/architecture/rendering-pipeline.md`
+- Build: `docs/build/build-from-source.md`
+- Tests: `docs/development/testing.md`
+- Internals: `docs/internals/`
+
+Key source areas:
+
+- `pdf2htmlEX/src/pdf2htmlEX.cc`: CLI, options, PDF open, renderer startup
+- `pdf2htmlEX/src/HTMLRenderer/`: main conversion callbacks
+- `pdf2htmlEX/src/BackgroundRenderer/`: PNG/JPEG/SVG page backgrounds
+- `pdf2htmlEX/src/HTMLTextPage.*`, `HTMLTextLine.*`: HTML text output
+- `pdf2htmlEX/src/StateManager.h`: generated CSS classes
+- `pdf2htmlEX/src/util/ffw.*`: FontForge wrapper
+- `pdf2htmlEX/share/manifest`: final HTML assembly template
+- `pdf2htmlEX/test/`: Python and browser tests
+- `buildScripts/`: Poppler/FontForge/converter build automation
+
+Wiki material has been localized into `docs/user/`,
+`docs/build/prebuilt-packages.md`, and `docs/reference/wiki-sources.md`.
+Treat wiki-derived old-information pages as historical unless corroborated by
+current files.
+
+Verified during documentation:
+
+- Existing binary `pdf2htmlEX/build/pdf2htmlEX -v` ran.
+- `python3 pdf2htmlEX/test/test_output.py` passed 23 tests.
+- `ctest --test-dir pdf2htmlEX/build -R test_basic --output-on-failure` passed.
+- Rebuilding with local CMake 4.3.0 failed because CMake rejects the project's
+  old `cmake_minimum_required(VERSION 2.6.0)`.
+
+For code changes, read `llms-full.txt`, inspect the relevant internals doc, run
+targeted tests, and update docs when behavior changes.

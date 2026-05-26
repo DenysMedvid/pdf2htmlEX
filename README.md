@@ -2,6 +2,12 @@
 
 [![Build Status](https://travis-ci.org/pdf2htmlEX/pdf2htmlEX.svg?branch=master)](https://travis-ci.org/pdf2htmlEX/pdf2htmlEX)
 
+## Documentation
+
+Structured repository documentation is available in [docs/README.md](docs/README.md).
+AI-oriented entry points are available in [llms.txt](llms.txt) and
+[llms-full.txt](llms-full.txt).
+
 # Differences from upstream pdf2htmlEX: 
 
 This is my branch of pdf2htmlEX which aims to allow an open collaboration to help keep the project active. A number of changes and improvements have been incorporated from other forks:
